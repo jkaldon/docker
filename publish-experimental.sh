@@ -11,7 +11,7 @@ set -eou pipefail
 
 . jenkins-support
 
-: "${DOCKERHUB_ORGANISATION:=jenkins4eval}"
+: "${DOCKERHUB_ORGANISATION:=jkaldon}"
 : "${DOCKERHUB_REPO:=jenkins}"
 
 JENKINS_REPO="${DOCKERHUB_ORGANISATION}/${DOCKERHUB_REPO}"
@@ -36,7 +36,7 @@ MANIFEST_TOOL_VERSION="v0.9.0"
 get-manifest-tool() {
     if [[ ! -f manifest-tool ]]; then
         echo "Downloading manifest-tool"
-        if ! curl -OLs "https://github.com/estesp/manifest-tool/releases/download/$MANIFEST_TOOL_VERSION/manifest-tool-linux-amd64"; then
+        if ! curl -OLs "https://github.com/estesp/manifest-tool/releases/$MANIFEST_TOOL_VERSION/manifest-tool-linux-amd64"; then
             echo "Error downloading manifest-tool"
             exit
         fi
@@ -51,7 +51,7 @@ get-qemu-handlers() {
         pushd multiarch
         echo "Downloading Qemu handlers"
         for target_arch in ${QEMUARCHS[*]}; do
-            if ! curl -OLs "https://github.com/multiarch/qemu-user-static/releases/download/$QEMUVER/x86_64_qemu-${target_arch}-static.tar.gz"; then
+            if ! curl -OLs "https://github.com/multiarch/qemu-user-static/releases/$QEMUVER/x86_64_qemu-${target_arch}-static.tar.gz"; then
                 echo "Error downloading Qemu handler"
                 exit
             fi
@@ -94,28 +94,32 @@ set-base-image() {
         BASEIMAGE="ppc64le/openjdk:8-jdk-stretch"
     fi
 
-    # The Alpine image only supports arm32v6 but should work fine on arm32v7
-    # hardware - https://github.com/moby/moby/issues/34875
-    if [[ $variant =~ alpine && $arch == arm ]]; then
-        BASEIMAGE="arm32v6/openjdk:8-jdk-alpine"
-    elif [[ $variant =~ alpine ]]; then
+    if [[ $variant =~ alpine ]]; then
         BASEIMAGE="${BASEIMAGE/-stretch/}-alpine"
     elif [[ $variant =~ slim ]]; then
         BASEIMAGE="${BASEIMAGE/-stretch/}-slim"
     fi
 
     # Make the Dockerfile after we set the base image
-    sed -i "s|BASEIMAGE|${BASEIMAGE}|g" "$dockerfile"
+    sed-i "s|BASEIMAGE|${BASEIMAGE}|g" "$dockerfile"
 
     if [[ "${arch}" == "amd64" ]]; then
-        sed -i "/CROSS_BUILD_/d" "$dockerfile"
+        sed-i "/CROSS_BUILD_/d" "$dockerfile"
     else
         if [[ "${arch}" == "arm64" ]]; then
-            sed -i "s|ARCH|aarch64|g" "$dockerfile"
+            sed-i "s|ARCH|aarch64|g" "$dockerfile"
         else
-            sed -i "s|ARCH|${arch}|g" "$dockerfile"
+            sed-i "s|ARCH|${arch}|g" "$dockerfile"
         fi
-        sed -i "s/CROSS_BUILD_//g" "$dockerfile"
+        sed-i "s/CROSS_BUILD_//g" "$dockerfile"
+    fi
+}
+
+sed-i() {
+    if [ "$(uname)" == 'Darwin' ]; then
+      gsed -i "$@"
+    else
+      sed -i "$@"
     fi
 }
 
@@ -143,7 +147,7 @@ docker-tag() {
 
 login-token() {
     # could use jq .token
-    curl -q -sSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${JENKINS_REPO}:pull" | grep -o '"token":"[^"]*"' | cut -d':' -f 2 | xargs echo
+    curl -q -sSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${JENKINS_REPO}:pull" | grep -o '"token":\s*"[^"]*"' | cut -d':' -f 2 | xargs echo
 }
 
 is-published() {
@@ -352,10 +356,10 @@ push-manifest() {
 
 cleanup() {
     echo "Cleaning up"
-    rm -f manifest-tool
-    rm -f ./multiarch/qemu-*
-    rm -rf ./multiarch/Dockerfile-*
-    docker system prune --all --force
+    #rm -f manifest-tool
+    #rm -f ./multiarch/qemu-*
+    #rm -rf ./multiarch/Dockerfile-*
+    #docker system prune --all --force
 }
 
 # Process arguments

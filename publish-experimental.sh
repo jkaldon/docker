@@ -85,9 +85,9 @@ set-base-image() {
     if [[ $arch == amd64 ]]; then
         BASEIMAGE="openjdk:8-jdk"
     elif [[ $arch == arm ]]; then
-        BASEIMAGE="arm32v7/openjdk:8-jdk-stretch"
+        BASEIMAGE="jkaldon/arm32v7-openjdk:8-jdk-stretch"
     elif [[ $arch == arm64 ]]; then
-        BASEIMAGE="arm64v8/openjdk:8-jdk-stretch"
+        BASEIMAGE="jkaldon/arm64v8-openjdk:11-jdk-stretch"
     elif [[ $arch == s390x ]]; then
         BASEIMAGE="s390x/openjdk:8-jdk-stretch"
     elif [[ $arch == ppc64le ]]; then
@@ -243,7 +243,8 @@ publish() {
     for arch in ${ARCHS[*]}; do
         set-base-image "$variant" "$arch"
 
-        docker build --file "multiarch/Dockerfile$variant-$arch" \
+        docker build --no-cache --pull --progress=plain \
+                     --file "multiarch/Dockerfile$variant-$arch" \
                      --build-arg "JENKINS_VERSION=$version" \
                      --build-arg "JENKINS_SHA=$sha" \
                      --tag "${JENKINS_REPO}:${tag}-${arch}" \

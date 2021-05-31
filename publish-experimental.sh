@@ -75,29 +75,17 @@ set-base-image() {
 
     if [[ "$variant" =~ alpine ]]; then
         /bin/cp -f multiarch/Dockerfile.alpine "$dockerfile"
-    elif [[ "$variant" =~ slim ]]; then
-        /bin/cp -f multiarch/Dockerfile.slim "$dockerfile"
     else
-        /bin/cp -f multiarch/Dockerfile.debian "$dockerfile"
+        echo ERROR: This build is exclusively for alpine variant.
+        exit 1
     fi
 
     # Parse architectures and variants
-    if [[ $arch == amd64 ]]; then
-        BASEIMAGE="openjdk:8-jdk"
-    elif [[ $arch == arm ]]; then
-        BASEIMAGE="jkaldon/arm32v7-openjdk:8-jdk-stretch"
-    elif [[ $arch == arm64 ]]; then
-        BASEIMAGE="jkaldon/arm64v8-openjdk:11-jdk-stretch"
-    elif [[ $arch == s390x ]]; then
-        BASEIMAGE="s390x/openjdk:8-jdk-stretch"
-    elif [[ $arch == ppc64le ]]; then
-        BASEIMAGE="ppc64le/openjdk:8-jdk-stretch"
-    fi
-
-    if [[ $variant =~ alpine ]]; then
-        BASEIMAGE="${BASEIMAGE/-stretch/}-alpine"
-    elif [[ $variant =~ slim ]]; then
-        BASEIMAGE="${BASEIMAGE/-stretch/}-slim"
+    if [[ $arch == arm64 ]]; then
+        BASEIMAGE="jkaldon/arm64v8-openjdk:jdk11-alpine3.13"
+    else
+        echo ERROR: This build is exclusively for arm64v8 architecture.
+        exit 1
     fi
 
     # Make the Dockerfile after we set the base image
